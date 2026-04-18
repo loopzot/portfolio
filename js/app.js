@@ -335,8 +335,7 @@ function renderPortfolio(config) {
         </div>
         <div class="video-info">
           <h3 class="video-title">${video.title}</h3>
-          <p class="video-description${(video.description || video.problem || '').length > 150 ? ' truncated' : ''}" data-full-text="${(video.description || video.problem || '').replace(/"/g, '&quot;')}">${(video.description || video.problem || '').length > 150 ? (video.description || video.problem || '').substring(0, 150) + '...' : (video.description || video.problem || '')}</p>
-          ${(video.description || video.problem || '').length > 150 ? '<button class="read-more-btn" aria-expanded="false">Read More</button>' : ''}
+          <p class="video-description" data-full-text="${(video.description || video.problem || '').replace(/"/g, '&quot;')}">${(video.description || video.problem || '').length > 150 ? (video.description || video.problem || '').substring(0, 150) + '... <span class="read-more-toggle" role="button" tabindex="0" aria-expanded="false">Read More</span>' : (video.description || video.problem || '')}</p>
           ${tagsHTML ? `<div class="video-tags">${tagsHTML}</div>` : ''}
           <button class="view-case-study-btn" data-video-id="${video.id}">
             View Details
@@ -440,24 +439,28 @@ function renderPortfolio(config) {
   });
 
   // ── Read More Toggle ────────────
-  portfolio.querySelectorAll('.read-more-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const desc = btn.previousElementSibling;
+  portfolio.querySelectorAll('.read-more-toggle').forEach(toggle => {
+    const handleToggle = () => {
+      const desc = toggle.closest('.video-description');
       const fullText = desc.dataset.fullText;
-      const isExpanded = btn.getAttribute('aria-expanded') === 'true';
+      const isExpanded = toggle.getAttribute('aria-expanded') === 'true';
 
       if (isExpanded) {
-        desc.textContent = fullText.substring(0, 150) + '...';
-        desc.classList.add('truncated');
-        btn.textContent = 'Read More';
-        btn.setAttribute('aria-expanded', 'false');
+        desc.innerHTML = fullText.substring(0, 150) + '... <span class="read-more-toggle" role="button" tabindex="0" aria-expanded="false">Read More</span>';
+        // Re-bind the new toggle
+        const newToggle = desc.querySelector('.read-more-toggle');
+        newToggle.addEventListener('click', handleToggle);
+        newToggle.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleToggle(); } });
       } else {
-        desc.textContent = fullText;
-        desc.classList.remove('truncated');
-        btn.textContent = 'Show Less';
-        btn.setAttribute('aria-expanded', 'true');
+        desc.innerHTML = fullText + ' <span class="read-more-toggle" role="button" tabindex="0" aria-expanded="true">Show Less</span>';
+        // Re-bind the new toggle
+        const newToggle = desc.querySelector('.read-more-toggle');
+        newToggle.addEventListener('click', handleToggle);
+        newToggle.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleToggle(); } });
       }
-    });
+    };
+    toggle.addEventListener('click', handleToggle);
+    toggle.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleToggle(); } });
   });
 
   // ── Lazy Load Videos ─────────────
