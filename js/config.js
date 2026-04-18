@@ -21,12 +21,11 @@ const PORTFOLIO_CONFIG = {
   },
   "bioBlock": {
     "introTitle": "About Me",
-    "introText": "I specialize in creating dynamic, fast-paced edits tailored for modern audiences. With a deep understanding of pacing and retention, my goal is to maximize engagement.",
+    "introText": "I specialize in creating dynamic, fast-paced edits tailored for modern audiences. With a deep understanding of pacing and retention, my goal is to convey the message and emotion the video should.",
     "specialization": "Short-form content, Documentaries, & Brand Films",
     "services": [
-      "Advanced Color Grading",
-      "Motion Graphics & VFX",
-      "Sound Design & Mixing",
+      "Video Editing",
+      "Motion Graphics",
       "Thumbnail & Hook Strategy"
     ],
     "importantNoteTitle": "Important Note",
