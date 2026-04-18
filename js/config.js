@@ -80,13 +80,13 @@ const PORTFOLIO_CONFIG = {
       "problem": "Previous videos had a steep drop-off rate within the first 30 seconds of the video.",
       "goal": "Maximize viewer retention using visual pattern interrupts and fast-paced editing.",
       "solution": "Implemented jump cuts, dynamic zooms, text overlays, and an active sound design layer.",
-      "videoUrl": "https://www.youtube.com/embed/dQw4w9WgXcQ",
+      "videoUrl": "https://drive.google.com/file/d/1jWP9bC_1wyurq-syfb9PD69B1Ji4HMU_/view?usp=drivesdk",
       "tags": [
         "YouTube",
         "Retention",
         "Pacing"
       ],
-      "ratio": "16:9",
+      "ratio": "9:16",
       "categories": [
         "Long Form"
       ],
