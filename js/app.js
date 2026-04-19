@@ -493,24 +493,42 @@ function renderPortfolio(config) {
 }
 
 // ── Stop all playing videos and revert to thumbnails ────
-function stopAllVideos(scope) {
-  const root = scope || document.getElementById('portfolio');
-  if (!root) return;
-  root.querySelectorAll('.video-container iframe').forEach(iframe => {
-    const container = iframe.parentElement;
-    const rawSrc = iframe.dataset.originalSrc || '';
-    const ytId = getYouTubeId(rawSrc);
-    let bgStyle = '';
-    if (ytId) {
-      bgStyle = `style="background-image: url('https://img.youtube.com/vi/${ytId}/maxresdefault.jpg'); background-size: cover; background-position: center;"`;
-    }
-    container.innerHTML = `
-      <div class="video-placeholder" ${bgStyle} data-src="${rawSrc}" role="button" aria-label="Play video" tabindex="0">
-        <div class="play-icon">
-          <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
-        </div>
-      </div>
-    `;
+function stopAllVideos() {
+  // Target both main portfolio and popup content
+  const roots = [
+    document.getElementById('portfolio'),
+    document.getElementById('case-study-content')
+  ];
+  
+  roots.forEach(root => {
+    if (!root) return;
+    // Find iframes in either container
+    root.querySelectorAll('.video-container iframe, .cs-video-container iframe').forEach(iframe => {
+      const container = iframe.parentElement;
+      // Get source from data attribute or src
+      let rawSrc = iframe.dataset.originalSrc;
+      if (!rawSrc && iframe.src.includes('youtube.com/embed/')) {
+        const id = iframe.src.split('embed/')[1].split('?')[0];
+        rawSrc = `https://www.youtube.com/watch?v=${id}`;
+      }
+
+      if (rawSrc) {
+        const ytId = getYouTubeId(rawSrc);
+        let bgStyle = '';
+        if (ytId) {
+          bgStyle = `style="background-image: url('https://img.youtube.com/vi/${ytId}/maxresdefault.jpg'); background-size: cover; background-position: center;"`;
+        }
+        container.innerHTML = `
+          <div class="video-placeholder" ${bgStyle} data-src="${rawSrc}" role="button" aria-label="Play video" tabindex="0">
+            <div class="play-icon">
+              <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+            </div>
+          </div>
+        `;
+      } else {
+        container.innerHTML = ''; 
+      }
+    });
   });
 }
 
@@ -518,31 +536,27 @@ function stopAllVideos(scope) {
 function openCaseStudy(video) {
   const modal = document.getElementById('case-study-modal');
   const content = document.getElementById('case-study-content');
-  const closeBtn = document.getElementById('close-case-study');
   
   const tagsHTML = video.tags ? video.tags.map(tag => `<span class="video-tag">${tag}</span>`).join('') : '';
   const ratioClass = video.ratio === '9:16' ? 'vertical-case' : 'horizontal-case';
 
-  // Check if this video is already playing on the main page
-  const videoBlock = document.querySelector(`.video-block[data-video-id="${video.id}"]`);
-  const existingIframe = videoBlock ? videoBlock.querySelector('.video-container iframe') : null;
-  const isPlaying = !!existingIframe;
+  // Check if this specific video is already playing on the main page
+  const mainVideoBlock = document.querySelector(`.video-block[data-video-id="${video.id}"]`);
+  const isPlayingOnMain = mainVideoBlock ? !!mainVideoBlock.querySelector('.video-container iframe') : false;
 
-  // Build modal content
+  // Build modal content structure
   content.innerHTML = `
     <div class="cs-layout ${ratioClass}">
       <div class="cs-video-container" id="cs-video-slot"></div>
       <div class="cs-content">
         ${video.category ? `<span class="cs-category">${video.category}</span>` : ''}
         <h2 class="cs-title">${video.title}</h2>
-        
         <div class="cs-details">
           ${video.problem ? `<div class="cs-section"><h4 class="cs-subheading">Problem</h4><div class="cs-text">${nl2br(video.problem)}</div></div>` : ''}
           ${video.goal ? `<div class="cs-section"><h4 class="cs-subheading">Goal</h4><div class="cs-text">${nl2br(video.goal)}</div></div>` : ''}
           ${video.solution ? `<div class="cs-section"><h4 class="cs-subheading">What I did</h4><div class="cs-text">${nl2br(video.solution)}</div></div>` : ''}
           ${!video.problem && !video.goal && !video.solution && video.description ? `<div class="cs-description">${nl2br(video.description)}</div>` : ''}
         </div>
-        
         ${tagsHTML ? `<div class="cs-tags">${tagsHTML}</div>` : ''}
       </div>
     </div>
@@ -550,11 +564,21 @@ function openCaseStudy(video) {
 
   const videoSlot = document.getElementById('cs-video-slot');
 
-  if (isPlaying) {
-    // Video IS playing → move it into the popup (continues seamlessly)
-    videoSlot.appendChild(existingIframe);
+  // Stop any OTHER videos that might be playing elsewhere
+  stopAllVideos();
+
+  if (isPlayingOnMain) {
+    // Video WAS playing → load it with AUTOPLAY in the popup
+    const id = getYouTubeId(video.videoUrl);
+    const iframe = document.createElement('iframe');
+    if (id) iframe.src = `https://www.youtube.com/embed/${id}?autoplay=1&rel=0&modestbranding=1`;
+    else iframe.src = normalizeVideoUrl(video.videoUrl);
+    iframe.setAttribute('frameborder', '0');
+    iframe.setAttribute('allow', 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share');
+    iframe.setAttribute('allowfullscreen', 'true');
+    videoSlot.appendChild(iframe);
   } else {
-    // Video is NOT playing → show thumbnail with play button (no autoplay)
+    // Video was NOT playing → show THUMBNAIL (No Autoplay)
     const ytId = getYouTubeId(video.videoUrl);
     let bgStyle = '';
     if (ytId) {
@@ -567,14 +591,14 @@ function openCaseStudy(video) {
         </div>
       </div>
     `;
-    // Click to play inside the modal
+    
+    // Add manual play listener for the popup
     const placeholder = videoSlot.querySelector('.video-placeholder');
     placeholder.addEventListener('click', () => {
-      const src = video.videoUrl;
-      const id = getYouTubeId(src);
+      const id = getYouTubeId(video.videoUrl);
       const iframe = document.createElement('iframe');
       if (id) iframe.src = `https://www.youtube.com/embed/${id}?autoplay=1&rel=0&modestbranding=1`;
-      else iframe.src = normalizeVideoUrl(src);
+      else iframe.src = normalizeVideoUrl(video.videoUrl);
       iframe.setAttribute('frameborder', '0');
       iframe.setAttribute('allow', 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share');
       iframe.setAttribute('allowfullscreen', 'true');
@@ -586,47 +610,26 @@ function openCaseStudy(video) {
   modal.classList.add('active');
   document.body.style.overflow = 'hidden';
 
-  // Prevent background scroll on touch devices (Simplified to rely on body overflow)
-  modal.addEventListener('touchmove', (e) => {
-    if (!e.target.closest('.case-study-scroll-area')) {
-      e.preventDefault();
-    }
-  }, { passive: false });
-
-  // Scroll the content area to top
+  // Scroll the content area to the top
   const scrollArea = modal.querySelector('.case-study-scroll-area');
   if (scrollArea) scrollArea.scrollTop = 0;
 
   const closeFn = () => {
-    // Stop all video playback — don't continue on main page
-    // If we moved an iframe from main page, stop it by reverting to thumbnail
-    if (isPlaying && videoBlock) {
-      const mainContainer = videoBlock.querySelector('.video-container');
-      if (mainContainer) {
-        const rawSrc = video.videoUrl;
-        const ytId = getYouTubeId(rawSrc);
-        let bgStyle = '';
-        if (ytId) {
-          bgStyle = `style="background-image: url('https://img.youtube.com/vi/${ytId}/maxresdefault.jpg'); background-size: cover; background-position: center;"`;
-        }
-        mainContainer.innerHTML = `
-          <div class="video-placeholder" ${bgStyle} data-src="${rawSrc}" role="button" aria-label="Play ${video.title}" tabindex="0">
-            <div class="play-icon">
-              <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
-            </div>
-          </div>
-        `;
-      }
-    }
-
     modal.classList.remove('active');
     document.body.style.overflow = '';
-    modal.removeEventListener('touchmove', preventBgScroll);
+    
+    // STOP ALL PLAYBACK on close
+    stopAllVideos();
+    
+    // Cleanup internal content to stop any stray audio
     setTimeout(() => { content.innerHTML = ''; }, 400);
-    closeBtn.removeEventListener('click', closeFn);
+    
+    document.getElementById('close-case-study').removeEventListener('click', closeFn);
   };
+
+  document.getElementById('close-case-study').addEventListener('click', closeFn);
   
-  closeBtn.addEventListener('click', closeFn);
+  // Close on backdrop click
   modal.addEventListener('click', (e) => {
     if (e.target === modal || e.target.classList.contains('case-study-scroll-area')) closeFn();
   });
