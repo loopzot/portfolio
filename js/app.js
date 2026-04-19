@@ -528,16 +528,16 @@ function openCaseStudy(video) {
   
   const tagsHTML = video.tags ? video.tags.map(tag => `<span class="video-tag">${tag}</span>`).join('') : '';
   const ratioClass = video.ratio === '9:16' ? 'vertical-case' : 'horizontal-case';
-  
-  const ytId = getYouTubeId(video.videoUrl);
-  let src = normalizeVideoUrl(video.videoUrl);
-  if (ytId) src = `https://www.youtube.com/embed/${ytId}?rel=0&modestbranding=1`;
 
+  // Try to find the existing playing iframe for this video
+  const videoBlock = document.querySelector(`.video-block[data-video-id="${video.id}"]`);
+  const existingIframe = videoBlock ? videoBlock.querySelector('.video-container iframe') : null;
+  const originalContainer = existingIframe ? existingIframe.parentElement : null;
+
+  // Build modal content with a placeholder for the video
   content.innerHTML = `
     <div class="cs-layout ${ratioClass}">
-      <div class="cs-video-container">
-        <iframe src="${src}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
-      </div>
+      <div class="cs-video-container" id="cs-video-slot"></div>
       <div class="cs-content">
         ${video.category ? `<span class="cs-category">${video.category}</span>` : ''}
         <h2 class="cs-title">${video.title}</h2>
@@ -553,6 +553,30 @@ function openCaseStudy(video) {
       </div>
     </div>
   `;
+
+  const videoSlot = document.getElementById('cs-video-slot');
+
+  if (existingIframe) {
+    // Move the existing iframe into the modal (seamless, no restart)
+    videoSlot.appendChild(existingIframe);
+  } else {
+    // No iframe playing yet — create a fresh one
+    const ytId = getYouTubeId(video.videoUrl);
+    let src = normalizeVideoUrl(video.videoUrl);
+    if (ytId) src = `https://www.youtube.com/embed/${ytId}?rel=0&modestbranding=1`;
+
+    const iframe = document.createElement('iframe');
+    iframe.src = src;
+    iframe.dataset.originalSrc = video.videoUrl;
+    iframe.setAttribute('frameborder', '0');
+    iframe.setAttribute('allow', 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share');
+    iframe.setAttribute('allowfullscreen', 'true');
+    videoSlot.appendChild(iframe);
+  }
+
+  // Store references for closing
+  modal._originalContainer = originalContainer;
+  modal._movedIframe = existingIframe;
 
   modal.classList.add('active');
   document.body.style.overflow = 'hidden';
@@ -570,6 +594,13 @@ function openCaseStudy(video) {
   if (scrollArea) scrollArea.scrollTop = 0;
 
   const closeFn = () => {
+    // Move iframe back to original container if it was borrowed
+    if (modal._movedIframe && modal._originalContainer) {
+      modal._originalContainer.appendChild(modal._movedIframe);
+      modal._movedIframe = null;
+      modal._originalContainer = null;
+    }
+
     modal.classList.remove('active');
     document.body.style.overflow = '';
     modal.removeEventListener('touchmove', preventBgScroll);
