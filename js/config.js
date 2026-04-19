@@ -32,7 +32,7 @@ const PORTFOLIO_CONFIG = {
     "importantNoteText": "The videos edited by me will not include any form of background music as per my religious guidelines. If you are okay with using vocals-only Islamic nasheeds, we can discuss further."
   },
   "filters": {
-    "enabled": true,
+    "enabled": false,
     "categories": [
       "Short Form",
       "Long Form"
