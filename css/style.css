@@ -1396,6 +1396,7 @@ button {
   opacity: 0;
   visibility: hidden;
   transition: all 0.4s var(--ease-smooth);
+  overflow: hidden;
 }
 
 .case-study-overlay.active {
@@ -1445,6 +1446,8 @@ button {
 .case-study-scroll-area {
   flex: 1;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
   padding: 80px 40px 100px;
   scrollbar-width: thin;
   scrollbar-color: var(--accent) var(--bg-card);

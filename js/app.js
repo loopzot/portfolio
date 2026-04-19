@@ -464,24 +464,34 @@ function renderPortfolio(config) {
     }
   });
 
-  // ── Lazy Load Videos ─────────────
+  // ── Lazy Load Videos (one at a time) ─────────────
   portfolio.querySelectorAll('.video-placeholder').forEach(placeholder => {
     const loadVideo = () => {
-      const rawSrc = placeholder.dataset.src;
-      const ytId = getYouTubeId(rawSrc);
-      const container = placeholder.parentElement;
-      container.innerHTML = '';
+      // Stop any currently playing video first
+      const existingIframes = portfolio.querySelectorAll('.video-container iframe');
+      existingIframes.forEach(iframe => {
+        const container = iframe.parentElement;
+        const rawSrc = iframe.dataset.originalSrc || '';
+        const ytId = getYouTubeId(rawSrc);
+        let bgStyle = '';
+        if (ytId) {
+          bgStyle = `style="background-image: url('https://img.youtube.com/vi/${ytId}/maxresdefault.jpg'); background-size: cover; background-position: center;"`;
+        }
+        container.innerHTML = `
+          <div class="video-placeholder" ${bgStyle} data-src="${rawSrc}" role="button" aria-label="Play video" tabindex="0">
+            <div class="play-icon">
+              <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+            </div>
+          </div>
+        `;
+        // Re-bind the new placeholder
+        const newPlaceholder = container.querySelector('.video-placeholder');
+        if (newPlaceholder) {
+          newPlaceholder.addEventListener('click', () => loadVideoFromPlaceholder(newPlaceholder));
+        }
+      });
 
-      const iframe = document.createElement('iframe');
-      if (ytId) iframe.src = `https://www.youtube.com/embed/${ytId}?autoplay=1&rel=0&modestbranding=1`;
-      else iframe.src = normalizeVideoUrl(rawSrc);
-      
-      iframe.setAttribute('frameborder', '0');
-      iframe.setAttribute('allow', 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share');
-      iframe.setAttribute('allowfullscreen', 'true');
-      iframe.loading = 'lazy';
-      
-      container.appendChild(iframe);
+      loadVideoFromPlaceholder(placeholder);
     };
 
     placeholder.addEventListener('click', loadVideo);
@@ -489,6 +499,25 @@ function renderPortfolio(config) {
       if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); loadVideo(); }
     });
   });
+}
+
+function loadVideoFromPlaceholder(placeholder) {
+  const rawSrc = placeholder.dataset.src;
+  const ytId = getYouTubeId(rawSrc);
+  const container = placeholder.parentElement;
+  container.innerHTML = '';
+
+  const iframe = document.createElement('iframe');
+  if (ytId) iframe.src = `https://www.youtube.com/embed/${ytId}?autoplay=1&rel=0&modestbranding=1`;
+  else iframe.src = normalizeVideoUrl(rawSrc);
+
+  iframe.dataset.originalSrc = rawSrc;
+  iframe.setAttribute('frameborder', '0');
+  iframe.setAttribute('allow', 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share');
+  iframe.setAttribute('allowfullscreen', 'true');
+  iframe.loading = 'lazy';
+
+  container.appendChild(iframe);
 }
 
 // ── Render Case Study Modal ─────────────────
@@ -528,9 +557,22 @@ function openCaseStudy(video) {
   modal.classList.add('active');
   document.body.style.overflow = 'hidden';
 
+  // Prevent background scroll on touch devices
+  const preventBgScroll = (e) => {
+    if (!e.target.closest('.case-study-scroll-area')) {
+      e.preventDefault();
+    }
+  };
+  modal.addEventListener('touchmove', preventBgScroll, { passive: false });
+
+  // Scroll the content area to top
+  const scrollArea = modal.querySelector('.case-study-scroll-area');
+  if (scrollArea) scrollArea.scrollTop = 0;
+
   const closeFn = () => {
     modal.classList.remove('active');
     document.body.style.overflow = '';
+    modal.removeEventListener('touchmove', preventBgScroll);
     setTimeout(() => { content.innerHTML = ''; }, 400);
     closeBtn.removeEventListener('click', closeFn);
   };
