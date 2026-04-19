@@ -135,6 +135,11 @@ const PORTFOLIO_CONFIG = {
       "id": "q3",
       "question": "Do you offer revisions?",
       "answer": "I offer two complimentary revision rounds with every video editing project. Any additional revisions beyond these will be billed separately.\n"
+    },
+    {
+      "id": "q1776580774250",
+      "question": "How much do you charge for video editing?",
+      "answer": "It really depends on what you’re looking for. A simple cut-and-trim video will cost a lot less than something with detailed edits, motion graphics, or effects. Once I understand your idea and what you need, I’ll give you a clear and fair price—no confusion, no hidden costs."
     }
   ],
   "admin": {
