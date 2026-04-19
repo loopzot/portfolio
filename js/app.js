@@ -523,12 +523,12 @@ function openCaseStudy(video) {
   const tagsHTML = video.tags ? video.tags.map(tag => `<span class="video-tag">${tag}</span>`).join('') : '';
   const ratioClass = video.ratio === '9:16' ? 'vertical-case' : 'horizontal-case';
 
-  // Try to find the existing playing iframe for this video
+  // Check if this video is already playing on the main page
   const videoBlock = document.querySelector(`.video-block[data-video-id="${video.id}"]`);
   const existingIframe = videoBlock ? videoBlock.querySelector('.video-container iframe') : null;
-  const originalContainer = existingIframe ? existingIframe.parentElement : null;
+  const isPlaying = !!existingIframe;
 
-  // Build modal content with a placeholder for the video
+  // Build modal content
   content.innerHTML = `
     <div class="cs-layout ${ratioClass}">
       <div class="cs-video-container" id="cs-video-slot"></div>
@@ -550,27 +550,38 @@ function openCaseStudy(video) {
 
   const videoSlot = document.getElementById('cs-video-slot');
 
-  if (existingIframe) {
-    // Move the existing iframe into the modal (seamless, no restart)
+  if (isPlaying) {
+    // Video IS playing → move it into the popup (continues seamlessly)
     videoSlot.appendChild(existingIframe);
   } else {
-    // No iframe playing yet — create a fresh one
+    // Video is NOT playing → show thumbnail with play button (no autoplay)
     const ytId = getYouTubeId(video.videoUrl);
-    let src = normalizeVideoUrl(video.videoUrl);
-    if (ytId) src = `https://www.youtube.com/embed/${ytId}?rel=0&modestbranding=1`;
-
-    const iframe = document.createElement('iframe');
-    iframe.src = src;
-    iframe.dataset.originalSrc = video.videoUrl;
-    iframe.setAttribute('frameborder', '0');
-    iframe.setAttribute('allow', 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share');
-    iframe.setAttribute('allowfullscreen', 'true');
-    videoSlot.appendChild(iframe);
+    let bgStyle = '';
+    if (ytId) {
+      bgStyle = `style="background-image: url('https://img.youtube.com/vi/${ytId}/maxresdefault.jpg'); background-size: cover; background-position: center;"`;
+    }
+    videoSlot.innerHTML = `
+      <div class="video-placeholder" ${bgStyle} data-src="${video.videoUrl}" role="button" aria-label="Play ${video.title}" tabindex="0">
+        <div class="play-icon">
+          <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+        </div>
+      </div>
+    `;
+    // Click to play inside the modal
+    const placeholder = videoSlot.querySelector('.video-placeholder');
+    placeholder.addEventListener('click', () => {
+      const src = video.videoUrl;
+      const id = getYouTubeId(src);
+      const iframe = document.createElement('iframe');
+      if (id) iframe.src = `https://www.youtube.com/embed/${id}?autoplay=1&rel=0&modestbranding=1`;
+      else iframe.src = normalizeVideoUrl(src);
+      iframe.setAttribute('frameborder', '0');
+      iframe.setAttribute('allow', 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share');
+      iframe.setAttribute('allowfullscreen', 'true');
+      videoSlot.innerHTML = '';
+      videoSlot.appendChild(iframe);
+    });
   }
-
-  // Store references for closing
-  modal._originalContainer = originalContainer;
-  modal._movedIframe = existingIframe;
 
   modal.classList.add('active');
   document.body.style.overflow = 'hidden';
@@ -588,11 +599,25 @@ function openCaseStudy(video) {
   if (scrollArea) scrollArea.scrollTop = 0;
 
   const closeFn = () => {
-    // Move iframe back to original container if it was borrowed
-    if (modal._movedIframe && modal._originalContainer) {
-      modal._originalContainer.appendChild(modal._movedIframe);
-      modal._movedIframe = null;
-      modal._originalContainer = null;
+    // Stop all video playback — don't continue on main page
+    // If we moved an iframe from main page, stop it by reverting to thumbnail
+    if (isPlaying && videoBlock) {
+      const mainContainer = videoBlock.querySelector('.video-container');
+      if (mainContainer) {
+        const rawSrc = video.videoUrl;
+        const ytId = getYouTubeId(rawSrc);
+        let bgStyle = '';
+        if (ytId) {
+          bgStyle = `style="background-image: url('https://img.youtube.com/vi/${ytId}/maxresdefault.jpg'); background-size: cover; background-position: center;"`;
+        }
+        mainContainer.innerHTML = `
+          <div class="video-placeholder" ${bgStyle} data-src="${rawSrc}" role="button" aria-label="Play ${video.title}" tabindex="0">
+            <div class="play-icon">
+              <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+            </div>
+          </div>
+        `;
+      }
     }
 
     modal.classList.remove('active');
