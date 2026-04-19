@@ -464,60 +464,54 @@ function renderPortfolio(config) {
     }
   });
 
-  // ── Lazy Load Videos (one at a time) ─────────────
-  portfolio.querySelectorAll('.video-placeholder').forEach(placeholder => {
-    const loadVideo = () => {
-      // Stop any currently playing video first
-      const existingIframes = portfolio.querySelectorAll('.video-container iframe');
-      existingIframes.forEach(iframe => {
-        const container = iframe.parentElement;
-        const rawSrc = iframe.dataset.originalSrc || '';
-        const ytId = getYouTubeId(rawSrc);
-        let bgStyle = '';
-        if (ytId) {
-          bgStyle = `style="background-image: url('https://img.youtube.com/vi/${ytId}/maxresdefault.jpg'); background-size: cover; background-position: center;"`;
-        }
-        container.innerHTML = `
-          <div class="video-placeholder" ${bgStyle} data-src="${rawSrc}" role="button" aria-label="Play video" tabindex="0">
-            <div class="play-icon">
-              <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
-            </div>
-          </div>
-        `;
-        // Re-bind the new placeholder
-        const newPlaceholder = container.querySelector('.video-placeholder');
-        if (newPlaceholder) {
-          newPlaceholder.addEventListener('click', () => loadVideoFromPlaceholder(newPlaceholder));
-        }
-      });
+  // ── Lazy Load Videos (one at a time, event delegation) ─────────────
+  portfolio.addEventListener('click', (e) => {
+    const placeholder = e.target.closest('.video-placeholder');
+    if (!placeholder || !portfolio.contains(placeholder)) return;
 
-      loadVideoFromPlaceholder(placeholder);
-    };
+    // Stop any currently playing video first
+    stopAllVideos(portfolio);
 
-    placeholder.addEventListener('click', loadVideo);
-    placeholder.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); loadVideo(); }
-    });
+    // Load the clicked video
+    const rawSrc = placeholder.dataset.src;
+    const ytId = getYouTubeId(rawSrc);
+    const container = placeholder.parentElement;
+    container.innerHTML = '';
+
+    const iframe = document.createElement('iframe');
+    if (ytId) iframe.src = `https://www.youtube.com/embed/${ytId}?autoplay=1&rel=0&modestbranding=1`;
+    else iframe.src = normalizeVideoUrl(rawSrc);
+
+    iframe.dataset.originalSrc = rawSrc;
+    iframe.setAttribute('frameborder', '0');
+    iframe.setAttribute('allow', 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share');
+    iframe.setAttribute('allowfullscreen', 'true');
+    iframe.loading = 'lazy';
+
+    container.appendChild(iframe);
   });
 }
 
-function loadVideoFromPlaceholder(placeholder) {
-  const rawSrc = placeholder.dataset.src;
-  const ytId = getYouTubeId(rawSrc);
-  const container = placeholder.parentElement;
-  container.innerHTML = '';
-
-  const iframe = document.createElement('iframe');
-  if (ytId) iframe.src = `https://www.youtube.com/embed/${ytId}?autoplay=1&rel=0&modestbranding=1`;
-  else iframe.src = normalizeVideoUrl(rawSrc);
-
-  iframe.dataset.originalSrc = rawSrc;
-  iframe.setAttribute('frameborder', '0');
-  iframe.setAttribute('allow', 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share');
-  iframe.setAttribute('allowfullscreen', 'true');
-  iframe.loading = 'lazy';
-
-  container.appendChild(iframe);
+// ── Stop all playing videos and revert to thumbnails ────
+function stopAllVideos(scope) {
+  const root = scope || document.getElementById('portfolio');
+  if (!root) return;
+  root.querySelectorAll('.video-container iframe').forEach(iframe => {
+    const container = iframe.parentElement;
+    const rawSrc = iframe.dataset.originalSrc || '';
+    const ytId = getYouTubeId(rawSrc);
+    let bgStyle = '';
+    if (ytId) {
+      bgStyle = `style="background-image: url('https://img.youtube.com/vi/${ytId}/maxresdefault.jpg'); background-size: cover; background-position: center;"`;
+    }
+    container.innerHTML = `
+      <div class="video-placeholder" ${bgStyle} data-src="${rawSrc}" role="button" aria-label="Play video" tabindex="0">
+        <div class="play-icon">
+          <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+        </div>
+      </div>
+    `;
+  });
 }
 
 // ── Render Case Study Modal ─────────────────
