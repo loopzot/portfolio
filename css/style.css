@@ -1348,12 +1348,28 @@ button {
 
 @media (max-width: 768px) {
   .portfolio-header {
-    flex-direction: column;
+    flex-direction: row;
+    flex-wrap: nowrap;
     align-items: center;
-    text-align: center;
+    gap: 12px;
+  }
+  .portfolio-header > div:first-child {
+    flex: 1;
+    min-width: 0;
+  }
+  .portfolio-header .section-label {
+    text-align: left;
+    font-size: 0.65rem;
   }
   .portfolio-header .section-title {
-    text-align: center;
+    text-align: left;
+    font-size: 1.3rem;
+  }
+  .filter-dropdown-btn {
+    padding: 8px 14px;
+    font-size: 0.78rem;
+    gap: 6px;
+    white-space: nowrap;
   }
 }
 
