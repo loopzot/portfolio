@@ -230,6 +230,8 @@ function renderHero(config) {
       ` : ''}
     </div>
 
+    ${bioHTML}
+
     <div class="scroll-hint">
       <div class="scroll-hint-line"></div>
     </div>
@@ -262,8 +264,8 @@ function normalizeVideoUrl(url) {
     }
 
     if (driveId) {
-      // Use direct preview link with autoplay
-      return `https://drive.google.com/file/d/${driveId}/preview?autoplay=1`;
+      // Use clean preview link (autoplay=1 causes infinite loop on Drive)
+      return `https://drive.google.com/file/d/${driveId}/preview`;
     }
     return url;
   }
